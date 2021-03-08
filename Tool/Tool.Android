@@ -1,0 +1,67 @@
+unit Tool.Android;
+
+interface
+
+type
+  TToolAndroid = class
+    class function GetDCIMPath: string;
+  end;
+
+implementation
+
+uses
+{$IFDEF ANDROID}
+  Androidapi.Helpers,
+  Androidapi.JNI.JavaTypes,
+  Androidapi.JNI.Os,
+  FMX.Platform.Android,
+  Androidapi.JNI,
+  Androidapi.JNI.Net,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNIBridge,
+  Androidapi.JNI.Providers,
+{$ENDIF}
+  SysUtils;
+
+{ TToolAndroid }
+
+class function TToolAndroid.GetDCIMPath: string;
+const
+  CST_DCIM_PATH = '/DCIM/';
+var
+  ContentResolver: JContentResolver;
+  Cursor: JCursor;
+  Path: string;
+  i: integer;
+begin
+  Result := '';
+
+  ContentResolver := TAndroidHelper.ContentResolver;
+  Cursor := ContentResolver.query(TJImages_Media.JavaClass.EXTERNAL_CONTENT_URI, nil, nil, nil, StringToJString('datetaken DESC'));
+
+  try
+    if Assigned(Cursor) then
+    begin
+      Cursor.moveToFirst;
+
+      while not Result.ToUpper.Contains(CST_DCIM_PATH) do
+      begin
+        i := Cursor.getColumnIndex(StringToJString('_data'));
+        if i <> -1 then
+        begin
+          Result := JStringToString(Cursor.getString(i));
+        end;
+
+        if not Cursor.moveToNext then
+          Break;
+      end;
+
+      if Result.ToUpper.Contains(CST_DCIM_PATH) then
+        Result := Copy(Result, 0, Result.IndexOf(CST_DCIM_PATH) + CST_DCIM_PATH.Length);
+    end;
+  finally
+    Cursor.close;
+  end;
+end;
+
+end.
